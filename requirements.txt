@@ -1,0 +1,9 @@
+anthropic
+scikit-learn
+python-dotenv
+PyMuPDF
+pdfplumber
+python-docx
+pypdf
+fastapi
+uvicorn

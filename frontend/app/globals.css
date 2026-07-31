@@ -1,0 +1,144 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  :root {
+    --bg-primary: #FAF8F6;
+    --bg-secondary: #F4EFEA;
+    --bg-card: rgba(255, 255, 255, 0.90);
+    --border-color: #E7E0D8;
+    --border-glow: rgba(244, 63, 94, 0.3);
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --accent-primary: #F43F5E;
+    --accent-purple: #A855F7;
+  }
+
+  .dark {
+    --bg-primary: #110F17;
+    --bg-secondary: #181423;
+    --bg-card: rgba(26, 22, 37, 0.85);
+    --border-color: #2D253F;
+    --border-glow: rgba(244, 63, 94, 0.4);
+    --text-primary: #FAF4F8;
+    --text-secondary: #A8A1B3;
+    --accent-primary: #F43F5E;
+    --accent-purple: #A855F7;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+}
+
+/* Glassmorphism Panel Utility */
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+}
+
+.glass-panel-glow {
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+  will-change: transform, opacity;
+}
+
+.glass-panel-glow:hover {
+  border-color: rgba(244, 63, 94, 0.4);
+  box-shadow: 0 4px 20px -5px rgba(244, 63, 94, 0.2);
+}
+
+/* Glowing Pill Badges */
+.glass-pill {
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.glass-pill-purple {
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+/* Gradient Typography */
+.gradient-text {
+  background: linear-gradient(135deg, #F43F5E 0%, #A855F7 50%, #F59E0B 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-gold {
+  background: linear-gradient(135deg, #F59E0B 0%, #10B981 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Glowing Border Effect */
+.glow-border-rose {
+  position: relative;
+}
+.glow-border-rose::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, #F43F5E, #A855F7);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.glow-border-rose:hover::after {
+  opacity: 1;
+}
+
+.glow-border-blue {
+  position: relative;
+}
+.glow-border-blue::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: linear-gradient(135deg, #F43F5E, #A855F7);
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.glow-border-blue:hover::after {
+  opacity: 1;
+}
+
+/* Background Grids & Particle FX */
+.bg-grid-pattern {
+  background-size: 32px 32px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+}
+
+/* Sleek Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #3B2E4C;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F43F5E;
+}

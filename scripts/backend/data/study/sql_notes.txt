@@ -1,0 +1,4 @@
+SQL QUICK REFERENCE & QUERY GUIDE:
+- SELECT, JOIN (INNER, LEFT, RIGHT, FULL), GROUP BY, HAVING, ORDER BY.
+- Aggregate Functions: COUNT(), SUM(), AVG(), MIN(), MAX().
+- Subqueries & CTEs: WITH Clause for recursive and complex analytical queries.
