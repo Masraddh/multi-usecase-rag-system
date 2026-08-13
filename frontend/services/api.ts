@@ -82,7 +82,18 @@ export interface SystemStats {
   }[];
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+const resolveApiBase = (): string => {
+  let envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return 'http://localhost:8000/api/v1';
+  let cleaned = envUrl.trim().replace(/\/+$/, '');
+  if (!cleaned.endsWith('/api/v1')) {
+    cleaned = `${cleaned}/api/v1`;
+  }
+  return cleaned;
+};
+
+const API_BASE = resolveApiBase();
+
 
 export async function fetchAssistants(): Promise<AssistantInfo[]> {
   try {
