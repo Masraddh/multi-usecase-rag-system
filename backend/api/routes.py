@@ -4,19 +4,37 @@ import traceback
 from typing import List
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 
-from models.schemas import (
-    AssistantInfo,
-    ChatRequest,
-    ChatResponse,
-    RetrieveRequest,
-    RetrieveResponse,
-    RetrievedChunk,
-    SystemStats,
-    SettingsUpdate,
-    HealthResponse
-)
-from use_cases.registry import get_registry
-from engine.document_loaders import extract_text
+try:
+    from models.schemas import (
+        AssistantInfo,
+        ChatRequest,
+        ChatResponse,
+        RetrieveRequest,
+        RetrieveResponse,
+        RetrievedChunk,
+        SystemStats,
+        SettingsUpdate,
+        HealthResponse
+    )
+    from use_cases.registry import get_registry
+    from engine.document_loaders import extract_text
+    from utils.document_reader import DocumentReader
+except ModuleNotFoundError:
+    from backend.models.schemas import (
+        AssistantInfo,
+        ChatRequest,
+        ChatResponse,
+        RetrieveRequest,
+        RetrieveResponse,
+        RetrievedChunk,
+        SystemStats,
+        SettingsUpdate,
+        HealthResponse
+    )
+    from backend.use_cases.registry import get_registry
+    from backend.engine.document_loaders import extract_text
+    from backend.utils.document_reader import DocumentReader
+
 
 router = APIRouter()
 

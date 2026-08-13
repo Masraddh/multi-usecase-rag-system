@@ -5,9 +5,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # Ensure backend directory is in python path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
 
-from api.routes import router as api_router
+try:
+    from backend.api.routes import router as api_router
+except ModuleNotFoundError:
+    from api.routes import router as api_router
+
 
 app = FastAPI(
     title="🧠 RAG AI Assistant Suite API",
