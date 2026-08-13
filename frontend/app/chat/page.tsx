@@ -16,7 +16,6 @@ export default function ChatPage() {
   const [maxWords, setMaxWords] = useState<number>(80);
   const [overlap, setOverlap] = useState<number>(15);
   const [topK, setTopK] = useState<number>(3);
-  const [groundedMode, setGroundedMode] = useState<boolean>(true);
 
   // Chat State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -129,8 +128,7 @@ export default function ChatPage() {
         query: q.trim(),
         max_words: maxWords,
         overlap: overlap,
-        top_k: topK,
-        grounded_mode: groundedMode
+        top_k: topK
       });
 
       const aiMsg: Message = {
@@ -198,8 +196,6 @@ export default function ChatPage() {
         setOverlap={setOverlap}
         topK={topK}
         setTopK={setTopK}
-        groundedMode={groundedMode}
-        setGroundedMode={setGroundedMode}
         onClearChat={handleClearChat}
         onResetApp={handleResetApp}
         apiStatus={!errorMsg}
@@ -228,17 +224,6 @@ export default function ChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setGroundedMode(!groundedMode)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border flex items-center gap-1.5 transition-all ${
-                groundedMode
-                  ? 'bg-roseGold-500/10 border-roseGold-500/30 text-roseGold-400'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-400'
-              }`}
-            >
-              <span>{groundedMode ? '🔒 Grounded RAG: ON' : '🌐 Open AI Mode: OFF'}</span>
-            </button>
             {activeRetrievalChunks.length > 0 && (
               <button
                 onClick={() => setShowRetrievalPanel(!showRetrievalPanel)}
@@ -335,7 +320,7 @@ export default function ChatPage() {
               <button
                 key={i}
                 onClick={() => handleSend(sq)}
-                className="px-3 py-1 rounded-full glass-panel hover:bg-electric-500 hover:text-white transition-colors duration-75 active:scale-95 text-slate-300 text-ellipsis whitespace-nowrap shrink-0 border border-slate-700/50"
+                className="px-3 py-1 rounded-full glass-panel hover:bg-indigo-600 hover:text-white transition text-slate-300 text-ellipsis whitespace-nowrap shrink-0 border border-slate-700/50"
               >
                 "{sq}"
               </button>
@@ -358,12 +343,12 @@ export default function ChatPage() {
               onChange={(e) => setInputQuery(e.target.value)}
               placeholder={`Ask ${selectedAssistant?.name || 'assistant'} based on ${selectedAssistant?.filename || 'document'}...`}
               disabled={loading}
-              className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-electric-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 transition-colors duration-100"
+              className="flex-1 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 transition"
             />
             <button
               type="submit"
               disabled={loading || !inputQuery.trim()}
-              className="px-5 py-3 rounded-xl bg-gradient-to-r from-electric-500 via-purpleAccent-500 to-cyanAccent-500 hover:from-electric-600 hover:to-purpleAccent-600 text-white font-bold text-sm shadow-glow-blue active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-75 flex items-center gap-2"
+              className="px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
             >
               {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               Send

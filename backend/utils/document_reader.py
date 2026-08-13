@@ -139,8 +139,7 @@ def read_pdf(file_input: Union[str, bytes, BinaryIO], filename: Optional[str] = 
                 chars = len(txt_clean)
                 words = len(txt_clean.split())
                 snippet = txt_clean[:100].replace("\n", " ") if txt_clean else "<EMPTY_PAGE>"
-                safe_snippet = snippet.encode("ascii", errors="replace").decode("ascii")
-                print(f"  -> Page {i}: Characters={chars}, Words={words}, Preview=\"{safe_snippet}...\"", flush=True)
+                print(f"  -> Page {i}: Characters={chars}, Words={words}, Preview=\"{snippet}...\"", flush=True)
                 if txt_clean:
                     pages_text.append(txt_clean)
             doc.close()
@@ -164,8 +163,7 @@ def read_pdf(file_input: Union[str, bytes, BinaryIO], filename: Optional[str] = 
                     chars = len(txt_clean)
                     words = len(txt_clean.split())
                     snippet = txt_clean[:100].replace("\n", " ") if txt_clean else "<EMPTY_PAGE>"
-                    safe_snippet = snippet.encode("ascii", errors="replace").decode("ascii")
-                    print(f"  -> [pdfplumber] Page {i}: Characters={chars}, Words={words}, Preview=\"{safe_snippet}...\"", flush=True)
+                    print(f"  -> [pdfplumber] Page {i}: Characters={chars}, Words={words}, Preview=\"{snippet}...\"", flush=True)
                     if txt_clean:
                         pages_text.append(txt_clean)
         except ValueError as ve:
@@ -191,8 +189,7 @@ def read_pdf(file_input: Union[str, bytes, BinaryIO], filename: Optional[str] = 
                 chars = len(txt_clean)
                 words = len(txt_clean.split())
                 snippet = txt_clean[:100].replace("\n", " ") if txt_clean else "<EMPTY_PAGE>"
-                safe_snippet = snippet.encode("ascii", errors="replace").decode("ascii")
-                print(f"  -> [pypdf] Page {i}: Characters={chars}, Words={words}, Preview=\"{safe_snippet}...\"", flush=True)
+                print(f"  -> [pypdf] Page {i}: Characters={chars}, Words={words}, Preview=\"{snippet}...\"", flush=True)
                 if txt_clean:
                     pages_text.append(txt_clean)
         except ValueError as ve:
@@ -412,41 +409,6 @@ def extract_text(
     return cleaned_text, page_count, word_count, char_count
 
 
-def extract_text_from_directory(dir_path: str) -> Tuple[str, int, int, int, List[str]]:
-    """
-    Scans a directory, extracts text from all supported files (PDF, DOCX, TXT, MD, PPTX, CSV),
-    and returns (combined_text, total_pages, total_words, total_chars, file_list).
-    """
-    if not os.path.exists(dir_path):
-        return "", 0, 0, 0, []
-
-    combined_chunks = []
-    total_pages = 0
-    total_words = 0
-    total_chars = 0
-    file_list = []
-
-    for root, _, files in os.walk(dir_path):
-        for fname in sorted(files):
-            if fname.startswith(".") or fname.endswith((".pyc", ".tmp")):
-                continue
-            ext = os.path.splitext(fname)[1].lower()
-            if ext in [".pdf", ".docx", ".doc", ".txt", ".md", ".pptx", ".csv"]:
-                fpath = os.path.join(root, fname)
-                try:
-                    text, pages, words, chars = extract_text(fpath, filename=fname)
-                    combined_chunks.append(f"--- DOCUMENT: {fname} ---\n{text}")
-                    total_pages += pages
-                    total_words += words
-                    total_chars += chars
-                    file_list.append(fname)
-                except Exception as e:
-                    print(f"[DIRECTORY SCAN ERROR] Failed to read {fname}: {e}")
-
-    merged_text = "\n\n".join(combined_chunks)
-    return merged_text, total_pages, total_words, total_chars, file_list
-
-
 class DocumentReader:
     """
     Class wrapper mapping static methods to document reading utilities.
@@ -456,6 +418,5 @@ class DocumentReader:
     read_txt = staticmethod(read_txt)
     read_markdown = staticmethod(read_markdown)
     extract_text = staticmethod(extract_text)
-    extract_text_from_directory = staticmethod(extract_text_from_directory)
     clean_text = staticmethod(clean_text)
     validate_document = staticmethod(validate_document)

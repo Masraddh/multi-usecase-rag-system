@@ -14,8 +14,3 @@ Technical Skills & Machine Learning Expertise:
 - Languages & Tools: Python, SQL, JavaScript, React Native, Power BI, Git, Docker.
 - AI/ML Expertise: Built custom Retrieval-Augmented Generation (RAG) pipelines using Python, scikit-learn TF-IDF, vector search, and Anthropic Claude APIs.
 - Experience with REST APIs, asynchronous task processing, and modular software architecture.
-
-Education & Academic Background:
-- Bachelor of Technology (B.Tech) in Information Technology from G. Narayanamma Institute of Technology and Science (2022–2026) with a CGPA of 7.75.
-- Intermediate education completed at Government Junior College (Girls) with 81%.
-- Secondary School Certificate (SSC) completed at St. Claire High School.

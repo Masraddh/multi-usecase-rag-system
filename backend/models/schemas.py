@@ -24,8 +24,6 @@ class AssistantInfo(BaseModel):
     index_status: str = Field("✅ Successfully Indexed", description="Index status text indicator")
     retrieval_ready: bool = Field(True, description="Whether TF-IDF retrieval index is ready")
     is_custom: bool = Field(False, description="Whether active document is a custom upload")
-    documents: List[str] = Field(default_factory=list, description="List of active knowledge base filenames")
-    build_time_ms: float = Field(0.0, description="Knowledge base index build duration in milliseconds")
     sample_queries: List[str] = Field(default_factory=list, description="Pre-loaded sample user queries")
 
 
@@ -43,7 +41,6 @@ class ChatRequest(BaseModel):
     max_words: Optional[int] = Field(None, description="Optional override chunk size")
     overlap: Optional[int] = Field(None, description="Optional override chunk overlap")
     top_k: Optional[int] = Field(None, description="Optional override top_k parameter")
-    grounded_mode: Optional[bool] = Field(True, description="Strict Grounded RAG mode if True, Open General Knowledge LLM mode if False")
     api_key: Optional[str] = Field(None, description="Optional per-session Anthropic API Key override")
 
 

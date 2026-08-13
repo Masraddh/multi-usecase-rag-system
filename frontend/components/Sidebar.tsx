@@ -22,8 +22,7 @@ import {
   LayoutDashboard,
   Settings,
   Info,
-  ChevronRight,
-  Database
+  ChevronRight
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,8 +35,6 @@ interface SidebarProps {
   setOverlap: (val: number) => void;
   topK: number;
   setTopK: (val: number) => void;
-  groundedMode?: boolean;
-  setGroundedMode?: (val: boolean) => void;
   onClearChat: () => void;
   onResetApp: () => void;
   apiStatus: boolean;
@@ -61,8 +58,6 @@ export default function Sidebar({
   setOverlap,
   topK,
   setTopK,
-  groundedMode = true,
-  setGroundedMode,
   onClearChat,
   onResetApp,
   apiStatus,
@@ -71,9 +66,9 @@ export default function Sidebar({
 
   const navCards = [
     { href: '/', label: 'Home', icon: Home, desc: 'Landing Overview' },
-    { href: '/knowledge-base', label: 'Knowledge Base', icon: Database, desc: 'Documents' },
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Analytics' },
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, desc: 'Analytics Metrics' },
     { href: '/settings', label: 'Settings', icon: Settings, desc: 'API & Config' },
+    { href: '/about', label: 'About', icon: Info, desc: 'Architecture & Spec' },
   ];
 
   return (
@@ -125,7 +120,7 @@ export default function Sidebar({
                 <button
                   key={ast.id}
                   onClick={() => onSelectAssistant(ast)}
-                  className={`w-full text-left p-3 rounded-2xl transition-colors duration-100 active:scale-[0.99] flex items-center gap-3 border ${
+                  className={`w-full text-left p-3 rounded-2xl transition-all duration-200 flex items-center gap-3 border ${
                     isSelected
                       ? 'bg-gradient-to-r from-electric-600/20 to-purpleAccent-600/20 border-electric-500/50 text-electric-400 dark:text-electric-300 font-bold shadow-glow-blue'
                       : 'border-slate-200/60 dark:border-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300'
@@ -184,34 +179,6 @@ export default function Sidebar({
               onChange={(e) => setOverlap(Number(e.target.value))}
               className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purpleAccent-500"
             />
-          </div>
-
-          {/* Strict Grounded RAG Toggle Switch */}
-          <div className="p-3 rounded-2xl bg-roseGold-500/10 border border-roseGold-500/20 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 font-mono">
-                <Sparkles className="w-3.5 h-3.5 text-roseGold-400" />
-                Grounded RAG Mode
-              </span>
-              <button
-                type="button"
-                onClick={() => setGroundedMode && setGroundedMode(!groundedMode)}
-                className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${
-                  groundedMode ? 'bg-roseGold-500' : 'bg-slate-400 dark:bg-slate-700'
-                }`}
-              >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
-                    groundedMode ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-              {groundedMode 
-                ? "🔒 Grounded RAG ON: Answers ONLY using facts from indexed documents." 
-                : "🌐 Grounded RAG OFF: Answers using documents + general AI knowledge."}
-            </p>
           </div>
 
           {/* Top K Slider */}

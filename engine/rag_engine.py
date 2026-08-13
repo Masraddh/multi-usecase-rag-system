@@ -22,30 +22,8 @@ try:
 except ImportError:
     openai = None
 
-try:
-    import google.generativeai as genai
-except ImportError:
-    genai = None
-
 
 from utils.document_reader import DocumentReader
-
-
-def safe_print(*args, **kwargs):
-    """
-    Safely prints strings to stdout without raising UnicodeEncodeError on Windows (cp1252).
-    Replaces unencodable unicode characters with ASCII replacements if encoding fails.
-    """
-    try:
-        print(*args, **kwargs)
-    except UnicodeEncodeError:
-        safe_args = []
-        for arg in args:
-            if isinstance(arg, str):
-                safe_args.append(arg.encode("ascii", errors="replace").decode("ascii"))
-            else:
-                safe_args.append(arg)
-        print(*safe_args, **kwargs)
 
 
 class RAGEngine:
@@ -163,7 +141,6 @@ class RAGEngine:
         else:
             self.tfidf_matrix = None
             vocab_size = 0
-        self.vocab_size = vocab_size
         return self.vectorizer, self.tfidf_matrix, vocab_size
 
     def reload_index(
@@ -213,8 +190,8 @@ class RAGEngine:
         print(f"- Chunks Created: {len(self.chunks)}", flush=True)
         print(f"- Vocabulary Size: {vocab_size}", flush=True)
         print(f"- TF-IDF Matrix Shape: {self.matrix_shape_str}", flush=True)
-        print(f"- Index Status: [SUCCESS] Successfully Indexed", flush=True)
-        print(f"- Retrieval Status: [READY] Retrieval Ready", flush=True)
+        print(f"- Index Status: ✅ Successfully Indexed", flush=True)
+        print(f"- Retrieval Status: ✅ Retrieval Ready", flush=True)
         print(f"\n[FIRST 5 CHUNKS PREVIEW]:", flush=True)
         for i, chunk in enumerate(self.chunks[:5], 1):
             snippet = chunk[:120].replace("\n", " ")
@@ -342,97 +319,10 @@ class RAGEngine:
 
         return query, False, None
 
-    def _synthesize_natural_language_answer(
-        self,
-        query: str,
-        relevant_chunks: List[Tuple[int, float, str]],
-        intent_cat: Optional[str],
-        persona: str
-    ) -> str:
+    def ask_detailed(self, query: str) -> Dict[str, Any]:
         """
-        Local Natural Language Context Synthesizer.
-        Parses retrieved context chunks, extracts key facts (Education, Projects, Self-Intro, Specs),
-        and formats them into fluent, natural language sentences with source citations.
-        Ensures 100% zero raw chunk dumping under any circumstances.
-        """
-        if not relevant_chunks:
-            return "I don't have that information."
-
-        top_src_num, top_score, top_text = relevant_chunks[0]
-        all_context = "\n".join([chunk[2] for chunk in relevant_chunks])
-        q_lower = query.lower()
-
-        # 1. Handle Education Intent / Questions
-        if intent_cat == "education" or any(term in q_lower for term in ["education", "academic", "degree", "qualification", "college", "school", "university", "cgpa", "gpa"]):
-            has_gnits = re.search(r"(Narayanamma|GNITS|B\.Tech)", all_context, re.IGNORECASE)
-            if has_gnits:
-                return f"According to my resume, I am currently pursuing a Bachelor of Technology (B.Tech) in Information Technology at G. Narayanamma Institute of Technology and Science (2022–2026) with a CGPA of 7.75. Prior to that, I completed my Intermediate from Government Junior College (Girls) with 81%, followed by my SSC from St. Claire High School. [Source {top_src_num}]"
-            
-            # Dynamic fallback parsing for uploaded resumes with different education details
-            degree = re.search(r"(B\.Tech[^\n.,]+|Bachelor[^\n.,]+|Master[^\n.,]+|Degree[^\n.,]+)", all_context, re.IGNORECASE)
-            college = re.search(r"(Institute[^\n.,]+|University[^\n.,]+|College[^\n.,]+)", all_context, re.IGNORECASE)
-            cgpa = re.search(r"(CGPA:\s*[\d\.]+|GPA:\s*[\d\.]+)", all_context, re.IGNORECASE)
-            
-            summary_parts = []
-            if degree:
-                summary_parts.append(f"pursuing {degree.group(1).strip()}")
-            if college:
-                summary_parts.append(f"at {college.group(1).strip()}")
-            if cgpa:
-                summary_parts.append(f"with a {cgpa.group(1).strip()}")
-                
-            if summary_parts:
-                return f"According to my resume, my education background includes {', '.join(summary_parts)}. [Source {top_src_num}]"
-            return f"According to my resume context, my academic background covers Information Technology and relevant coursework. [Source {top_src_num}]"
-
-        # 2. Handle Projects Intent / Questions
-        elif intent_cat == "projects" or any(term in q_lower for term in ["project", "projects", "portfolio", "built", "developed", "system"]):
-            has_projects = "React Native" in all_context or "Power BI" in all_context
-            if has_projects:
-                return f"Based on my candidate profile, I have completed two key projects: 1. Real-Time Event Booking & Live Chat App (React Native): Developed a cross-platform mobile application using WebSockets and Firebase for live seat selection, serving over 10,000 active users. 2. Sales Analytics & ETL Dashboard Internship (Power BI & SQL): Completed a Data Analytics internship building executive dashboards and complex SQL workflows to process 500k+ customer records. [Source {top_src_num}]"
-            
-            projs = re.findall(r"(Project\s*\d*:[^\.\n]+|[A-Z][a-zA-Z0-9\s]+App|[A-Z][a-zA-Z0-9\s]+Dashboard)", all_context)
-            if projs:
-                clean_projs = "; ".join([p.strip() for p in projs[:3]])
-                return f"Based on my candidate profile, my technical projects include: {clean_projs}. [Source {top_src_num}]"
-            return f"Based on my candidate background, I have executed engineering projects focusing on full-stack application development and data analytics. [Source {top_src_num}]"
-
-        # 3. Handle Self-Introduction Intent / Questions
-        elif intent_cat == "self_intro" or any(term in q_lower for term in ["intro", "introduce", "yourself", "myself", "background", "who are you"]):
-            return f"Hello! According to my resume profile, I am an Information Technology candidate with strong expertise in React Native mobile development, SQL database engineering, Power BI analytics, and custom Machine Learning RAG pipelines. I specialize in building scalable, real-time user applications and data processing systems. [Source {top_src_num}]"
-
-        # 4. Handle Experience / Skills Intent
-        elif intent_cat in ["experience", "skills"] or any(term in q_lower for term in ["experience", "skill", "skills", "technologies", "tech stack"]):
-            return f"Based on my candidate background, my core technical skills include Python, SQL, JavaScript, React Native, Power BI, Docker, and building custom Retrieval-Augmented Generation (RAG) pipelines. [Source {top_src_num}]"
-
-        # 5. General Synthesizer for Campus FAQ, Study Buddy, Ecommerce, Code Docs
-        else:
-            lines = [l.strip("- *|\t").strip() for l in top_text.split("\n") if l.strip()]
-            clean_sentences = []
-            for line in lines:
-                if line.lower().startswith("project") or line.lower().startswith("candidate"):
-                    continue
-                sentences = re.split(r'(?<=[.!?])\s+', line)
-                for s in sentences:
-                    s_clean = re.sub(r'^[-\s\d\.\:]+', '', s).strip()
-                    if len(s_clean.split()) >= 4 and not s_clean.startswith("http"):
-                        clean_sentences.append(s_clean)
-            
-            if clean_sentences:
-                lead = clean_sentences[0]
-                rest = " ".join(clean_sentences[1:3])
-                if rest:
-                    return f"{lead} {rest} [Source {top_src_num}]"
-                return f"{lead} [Source {top_src_num}]"
-            else:
-                words = [w for w in top_text.split() if w not in ["-", "*", "|"]]
-                summary = " ".join(words[:35])
-                return f"{summary}... [Source {top_src_num}]"
-
-    def ask_detailed(self, query: str, grounded_mode: bool = True) -> Dict[str, Any]:
-        """
-        Retrieves context chunks and invokes LLM (Groq LLaMA 3.3 70B, Gemini, or Claude)
-        with strict grounding rules if grounded_mode is True, or open general knowledge if False.
+        Retrieves context chunks and invokes LLM (Anthropic Claude Sonnet or OpenAI fallback)
+        with strict grounding rules and comprehensive debug logging.
         """
         start_time = time.time()
         query_clean = query.strip()
@@ -505,147 +395,91 @@ class RAGEngine:
 
         context_str = "\n\n".join(context_parts) if context_parts else "No relevant context found."
 
-        if grounded_mode:
-            system_prompt = (
-                f"You are Gemini RAG Assistant acting as {self.persona}.\n\n"
-                "STRICT RETRIEVAL-AUGMENTED GENERATION (RAG) RULES:\n"
-                "1. Read and understand the retrieved context below.\n"
-                "2. Synthesize a natural, fluent, and professional answer in your own words using ONLY facts present in the Context.\n"
-                "3. NEVER copy the retrieved text verbatim or dump raw chunks.\n"
-                "4. For education queries ('What are my education', 'Tell me about your education'): Answer in fluent natural prose summarizing degree, institute, CGPA, intermediate, and SSC.\n"
-                "5. For project queries: Summarize each project naturally with purpose and tech stack.\n"
-                "6. For self-introductions: Articulate a polished interview introduction.\n"
-                "7. If the context does NOT contain enough information to answer the question, reply with EXACTLY:\n"
-                "   \"I don't have that information.\"\n"
-                "8. Never hallucinate or use outside knowledge.\n"
-                "9. Append source citations like `[Source 1]`, `[Source 2]` referencing the context chunks used."
-            )
-        else:
-            system_prompt = (
-                f"You are Gemini AI Assistant acting as {self.persona}.\n\n"
-                "GENERAL KNOWLEDGE MODE (GROUNDED RAG OFF):\n"
-                "1. If the retrieved context contains relevant information, use it as primary reference.\n"
-                "2. If the retrieved context is missing or insufficient, rely on your full general knowledge, reasoning, and intelligence to answer the user's question completely, accurately, and helpfully.\n"
-                "3. Do NOT reply with 'I don't have that information' when in general knowledge mode.\n"
-                "4. Provide clear, comprehensive, and professional answers to any topic or question asked by the user."
-            )
+        system_prompt = (
+            f"You are {self.persona}.\n\n"
+            "STRICT GROUNDING RULES:\n"
+            "1. Answer the user's query using ONLY the provided Context below.\n"
+            "2. If the user asks about their projects, self-introduction, profile summary, experience overview, or skills summary, synthesize a natural, fluent, professional interview response using ALL relevant facts present in the Context (projects, skills, internships, education).\n"
+            "3. If the context does NOT explicitly contain the exact information to answer the question, you MUST reply with EXACTLY:\n"
+            "   \"I don't have that information.\"\n"
+            "4. Do NOT invent, assume, extrapolate, or use outside background knowledge not present in the Context.\n"
+            "5. For every fact, claim, or detail stated, append a source citation tag like `[Source 1]`, `[Source 2]` referencing the chunk.\n"
+            "6. Maintain your persona tone while strictly adhering to these rules."
+        )
 
         user_content = (
             f"User Query: {query_clean}\n\n"
             f"Retrieved Context:\n{context_str}\n\n"
-            "Natural Language Answer:"
+            "Grounded Answer:"
         )
 
         answer = ""
 
         # Check if query has no relevant matching chunks
-        if not relevant_chunks and grounded_mode:
+        if not relevant_chunks:
             answer = "I don't have that information."
         else:
-            # 1. Try Groq Cloud API (High-speed LLaMA 3.3 70B / 8B inference)
-            groq_key = os.getenv("GROQ_API_KEY") or (self.anthropic_key if self.anthropic_key and self.anthropic_key.startswith("gsk_") else None)
-            if not answer and groq_key and groq_key.strip() and openai:
-                try:
-                    groq_client = openai.OpenAI(
-                        api_key=groq_key.strip(),
-                        base_url="https://api.groq.com/openai/v1"
-                    )
-                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"]
-                    for g_mod in groq_models:
-                        try:
-                            comp = groq_client.chat.completions.create(
-                                model=g_mod,
-                                max_tokens=1000,
-                                temperature=0.2,
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": user_content}
-                                ]
-                            )
-                            if comp and comp.choices and comp.choices[0].message.content:
-                                answer = comp.choices[0].message.content.strip()
-                                safe_print(f"[RAG SUCCESS] Generated answer using Groq Cloud ({g_mod})")
-                                break
-                        except Exception as gr_err:
-                            safe_print(f"[RAG GROQ '{g_mod}' NOTICE]: {gr_err}")
-                except Exception as e:
-                    safe_print(f"[RAG GROQ INIT ERROR]: {e}")
-
-            # 2. Try Google Gemini API
-            if not answer and (genai or "genai" in sys.modules):
-                gk = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-                if not gk and self.anthropic_key and self.anthropic_key.startswith("AIza"):
-                    gk = self.anthropic_key
-                if gk and gk.strip() and not gk.startswith("AQ."):
-                    try:
-                        os.environ["GOOGLE_API_KEY"] = gk.strip()
-                        if hasattr(genai, "configure"):
-                            genai.configure(api_key=gk.strip())
-                        
-                        prompt = f"{system_prompt}\n\n{user_content}"
-                        gemini_models = [
-                            "gemini-2.0-flash",
-                            "gemini-2.5-flash",
-                            "gemini-1.5-flash-latest",
-                            "gemini-flash-latest",
-                            "gemini-2.0-flash-lite",
-                            "gemini-pro-latest"
-                        ]
-                        for m_name in gemini_models:
-                            try:
-                                g_model = genai.GenerativeModel(m_name)
-                                resp = g_model.generate_content(prompt)
-                                if resp and hasattr(resp, "text") and resp.text:
-                                    answer = resp.text.strip()
-                                    safe_print(f"[RAG SUCCESS] Generated answer using Gemini ({m_name})")
-                                    break
-                            except Exception as g_err:
-                                safe_print(f"[RAG GEMINI '{m_name}' NOTICE]: {g_err}")
-                    except Exception as e:
-                        safe_print(f"[RAG GEMINI INIT ERROR]: {e}")
-
-            # 2. Try Anthropic API
-            if not answer and anthropic:
+            # Dynamically initialize Anthropic client if key is available
+            if not self.anthropic_client and anthropic:
                 ak = self.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
-                if ak and ak.strip() and not ak.startswith("AQ."):
+                if ak and ak.strip():
                     try:
-                        if not self.anthropic_client:
-                            self.anthropic_client = anthropic.Anthropic(api_key=ak.strip())
-                        response = self.anthropic_client.messages.create(
-                            model=self.model if self.model else "claude-3-7-sonnet-20250219",
-                            max_tokens=1000,
-                            system=system_prompt,
-                            messages=[{"role": "user", "content": user_content}]
-                        )
-                        answer = response.content[0].text.strip()
-                        safe_print("[RAG SUCCESS] Generated answer using Anthropic Claude")
+                        self.anthropic_client = anthropic.Anthropic(api_key=ak.strip())
                     except Exception as e:
-                        safe_print(f"[RAG ANTHROPIC API ERROR]: {e}")
+                        print(f"[RAG ANTHROPIC INIT ERROR]: {e}")
 
-            # 3. Try OpenAI API
-            if not answer and openai:
-                ok = os.getenv("OPENAI_API_KEY")
+            # 1. Call Anthropic API if client is present
+            if self.anthropic_client:
+                try:
+                    response = self.anthropic_client.messages.create(
+                        model=self.model,
+                        max_tokens=1000,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_content}]
+                    )
+                    answer = response.content[0].text.strip()
+                except Exception as e:
+                    print(f"[RAG ANTHROPIC API ERROR]: {e}")
+
+            # Dynamically initialize OpenAI client if key is available
+            if not answer and not self.openai_client and openai:
+                ok = os.getenv("OPENAI_API_KEY") or self.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
                 if ok and ok.strip():
                     try:
-                        if not self.openai_client:
-                            self.openai_client = openai.OpenAI(api_key=ok.strip())
-                        response = self.openai_client.chat.completions.create(
-                            model="gpt-4o-mini",
-                            max_tokens=1000,
-                            messages=[
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_content}
-                            ]
-                        )
-                        answer = response.choices[0].message.content.strip()
-                        safe_print("[RAG SUCCESS] Generated answer using OpenAI")
+                        self.openai_client = openai.OpenAI(api_key=ok.strip())
                     except Exception as e:
-                        safe_print(f"[RAG OPENAI API ERROR]: {e}")
+                        print(f"[RAG OPENAI INIT ERROR]: {e}")
 
-            # 4. Built-in Natural Language Context Synthesizer (Ensures 100% Zero Raw Chunk Dumping)
+            # 2. Call OpenAI API if Anthropic unavailable/failed
+            if not answer and self.openai_client:
+                try:
+                    response = self.openai_client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        max_tokens=1000,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ]
+                    )
+                    answer = response.choices[0].message.content.strip()
+                except Exception as e:
+                    print(f"[RAG OPENAI API ERROR]: {e}")
+
+            # 3. Grounded Fallback if no LLM API key configured or API calls fail
             if not answer:
-                answer = self._synthesize_natural_language_answer(query_clean, relevant_chunks, intent_cat, self.persona)
-                safe_print("[RAG SUCCESS] Generated answer using Natural Language Context Synthesizer")
+                top_src_num, top_score, top_text = relevant_chunks[0]
+                if is_intent:
+                    answer = (
+                        f"Based on your uploaded resume context [Source {top_src_num}] (Relevance Score: {top_score * 100:.1f}%):\n\n"
+                        f"{top_text}\n\n"
+                        f"*(Note: Grounded RAG vector retrieval completed. Set ANTHROPIC_API_KEY in Settings for AI natural language synthesis)*"
+                    )
+                else:
+                    answer = (
+                        f"Based on the retrieved context for query '{query_clean}' [Source {top_src_num}] (Relevance Score: {top_score * 100:.1f}%):\n\n"
+                        f"{top_text}\n\n"
+                        f"*(Note: Grounded RAG vector retrieval completed. Set ANTHROPIC_API_KEY in Settings for AI natural language synthesis)*"
+                    )
 
         latency_ms = round((time.time() - start_time) * 1000, 2)
 
@@ -657,19 +491,19 @@ class RAGEngine:
         # ======================================================================
         # DEBUG LOGGING (Checklist Items #4, #13)
         # ======================================================================
-        safe_print("=" * 80, flush=True)
-        safe_print(f"[RAG DEBUG LOG]", flush=True)
-        safe_print(f"1. Current User Question: '{query_clean}'", flush=True)
-        safe_print(f"2. Persona: '{self.persona}'", flush=True)
-        safe_print(f"3. Search Expansion Query: '{search_query}' (Intent: {intent_cat})", flush=True)
-        safe_print(f"4. Retrieved Chunks ({len(retrieved)} items):", flush=True)
+        print("=" * 80, flush=True)
+        print(f"[RAG DEBUG LOG]", flush=True)
+        print(f"1. Current User Question: '{query_clean}'", flush=True)
+        print(f"2. Persona: '{self.persona}'", flush=True)
+        print(f"3. Search Expansion Query: '{search_query}' (Intent: {intent_cat})", flush=True)
+        print(f"4. Retrieved Chunks ({len(retrieved)} items):", flush=True)
         for src_num, score, text in retrieved:
             snippet = text[:70].replace("\n", " ")
-            safe_print(f"   - Chunk ID: #{src_num} | Similarity Score: {score:.4f} ({score*100:.1f}%) | Snippet: {snippet}...", flush=True)
-        safe_print(f"5. Max Similarity Score: {max_score:.4f}", flush=True)
-        safe_print(f"6. Prompt Sent to LLM:\n--- SYSTEM ---\n{system_prompt}\n--- USER ---\n{user_content}", flush=True)
-        safe_print(f"7. Final Answer:\n{answer}", flush=True)
-        safe_print("=" * 80, flush=True)
+            print(f"   - Chunk ID: #{src_num} | Similarity Score: {score:.4f} ({score*100:.1f}%) | Snippet: {snippet}...", flush=True)
+        print(f"5. Max Similarity Score: {max_score:.4f}", flush=True)
+        print(f"6. Prompt Sent to LLM:\n--- SYSTEM ---\n{system_prompt}\n--- USER ---\n{user_content}", flush=True)
+        print(f"7. Final Answer:\n{answer}", flush=True)
+        print("=" * 80, flush=True)
 
         return {
             "query": query_clean,

@@ -49,7 +49,7 @@ export default function MessageItem({ message, onInspectRetrieval }: MessageItem
   };
 
   return (
-    <div className={`flex gap-3.5 sm:gap-4 p-4 rounded-3xl transition-opacity duration-150 ${
+    <div className={`flex gap-3.5 sm:gap-4 p-4 rounded-3xl transition-all duration-300 ${
       isUser
         ? 'bg-gradient-to-r from-electric-600 to-purpleAccent-600 text-white shadow-glow-blue ml-auto max-w-[85%] border border-electric-500/30'
         : 'glass-panel-glow text-slate-900 dark:text-slate-100 max-w-[95%]'

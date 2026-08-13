@@ -67,7 +67,7 @@ def test_pdf_ingestion_pipeline():
     assert upload_json.get("num_pages", 0) >= 2, "Failed to read 2 pages from PDF"
     assert upload_json.get("num_words", 0) > 50, "Extracted word count is too low"
     assert upload_json.get("num_chunks", 0) >= 1, "No vector chunks generated"
-    print("\n[PASSED] STEP 2: PDF Uploaded, Page-by-Page Extracted, and Indexed!")
+    print("\n✓ STEP 2 PASSED: PDF Uploaded, Page-by-Page Extracted, and Indexed!")
 
     # Step 3: Query active PDF index
     chat_url = "http://localhost:8000/api/v1/chat"
@@ -86,7 +86,7 @@ def test_pdf_ingestion_pipeline():
 
     assert res_chat.status_code == 200, f"Chat query failed with status {res_chat.status_code}"
     assert chat_json.get("answer"), "Returned answer is empty"
-    print("\n[PASSED] STEP 3: Query Successfully Answered from Uploaded PDF Knowledge Base!")
+    print("\n✓ STEP 3 PASSED: Query Successfully Answered from Uploaded PDF Knowledge Base!")
     print("=" * 80)
 
 if __name__ == "__main__":

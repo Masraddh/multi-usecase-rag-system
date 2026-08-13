@@ -1,4 +1,0 @@
-CANDIDATE TECHNICAL SKILLS & COMPETENCIES:
-- Languages & Tools: Python, SQL, JavaScript, React Native, Power BI, Git, Docker, WebSockets.
-- Machine Learning: Retrieval-Augmented Generation (RAG) architecture, TF-IDF vector search, Groq Cloud LLaMA-3.3, Google Gemini APIs.
-- Database Engineering: PostgreSQL, SQLite, Firebase Realtime Database, ETL Data Pipelines.

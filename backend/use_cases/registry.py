@@ -1,24 +1,13 @@
 import os
-import time
 from typing import Dict, List, Any, Optional
 from engine.rag_engine import RAGEngine
 from models.schemas import AssistantInfo
-from utils.document_reader import DocumentReader
-
-
-def safe_print(*args, **kwargs):
-    try:
-        print(*args, **kwargs)
-    except Exception:
-        safe_args = [str(arg).encode('ascii', errors='replace').decode('ascii') for arg in args]
-        print(*safe_args, **kwargs)
 
 
 class AssistantRegistry:
     """
     Singleton registry holding and managing all 5 domain AI Assistants.
-    Performs automatic startup multi-document directory scanning, TF-IDF vector indexing,
-    and supports dynamic 'replace' vs 'add' knowledge base upload modes.
+    Supports dynamic file uploads and resetting to default datasets.
     """
 
     def __init__(self, data_dir: Optional[str] = None):
@@ -32,168 +21,176 @@ class AssistantRegistry:
 
         self._register_all()
 
+    def _load_data(self, filename: str) -> str:
+        filepath = os.path.join(self.data_dir, filename)
+        if not os.path.exists(filepath):
+            return f"Dataset {filename} not found."
+        with open(filepath, "r", encoding="utf-8") as f:
+            return f.read()
+
     def _register_all(self):
-        assistant_configs = [
-            {
-                "id": "interview_coach",
-                "name": "Interview Preparation Coach",
-                "icon": "UserCheck",
-                "domain_folder": "interview",
-                "persona": "a professional interview coach helping the candidate rehearse technical and behavioral questions based on their candidate profile",
-                "desc": "Rehearses project experience, React Native, Power BI, SQL, and ML/RAG engineering questions.",
-                "max_words": 80,
-                "overlap": 15,
-                "top_k": 2,
-                "samples": [
-                    "Tell me about your education",
-                    "Explain my projects",
-                    "Generate a self introduction"
-                ]
-            },
-            {
-                "id": "campus_faq",
-                "name": "Campus FAQ Helpdesk",
-                "icon": "GraduationCap",
-                "domain_folder": "campus",
-                "persona": "a friendly campus helpdesk assistant providing accurate information regarding library, hostel, fees, and exams",
-                "desc": "Instant student assistance for library borrowing limits, hostel curfew hours, fee penalties, and exam attendance.",
-                "max_words": 90,
-                "overlap": 20,
-                "top_k": 3,
-                "samples": [
-                    "What are the hostel curfew hours?",
-                    "How many books can I borrow from the library?",
-                    "What is the penalty for late fee payment?"
-                ]
-            },
-            {
-                "id": "study_buddy",
-                "name": "Exam Study Buddy",
-                "icon": "BookOpen",
-                "domain_folder": "study",
-                "persona": "a patient teacher helping students master operating systems CPU scheduling algorithms with simple explanations",
-                "desc": "Tuned fine-grained RAG (50 words/chunk) explaining FCFS, SJF, Round Robin, and Convoy Effect.",
-                "max_words": 50,
-                "overlap": 12,
-                "top_k": 3,
-                "samples": [
-                    "Explain FCFS and SJF scheduling algorithms.",
-                    "Which scheduling algorithm causes the convoy effect and why?",
-                    "What are the ACID properties in DBMS?"
-                ]
-            },
-            {
-                "id": "ecommerce_support",
-                "name": "Ecommerce Customer Support",
-                "icon": "ShoppingBag",
-                "domain_folder": "ecommerce",
-                "persona": "a polite customer support agent for the Voyager Pro 30L Commuter Backpack store",
-                "desc": "Product specification helper for laptop sizing, color options, 15-day return policy, and warranty.",
-                "max_words": 80,
-                "overlap": 15,
-                "top_k": 2,
-                "samples": [
-                    "What is the laptop size limit and return policy?",
-                    "What colors are available for the Voyager Pro backpack?",
-                    "How long is the warranty coverage?"
-                ]
-            },
-            {
-                "id": "code_docs",
-                "name": "Code & API Documentation",
-                "icon": "Code",
-                "domain_folder": "code_docs",
-                "persona": "a technical documentation expert explaining the RAGEngine Python API reference",
-                "desc": "Grounded documentation assistant for RAGEngine methods: chunk_text(), retrieve(), and ask().",
-                "max_words": 80,
-                "overlap": 20,
-                "top_k": 3,
-                "samples": [
-                    "How does RAGEngine compute TF-IDF similarity?",
-                    "What parameters are passed to chunk_document?",
-                    "How to install and run the RAG Assistant Suite?"
-                ]
-            }
-        ]
-
-        for cfg in assistant_configs:
-            ast_id = cfg["id"]
-            dom = cfg["domain_folder"]
-            dom_path = os.path.join(self.data_dir, dom)
-            up_path = os.path.join(self.data_dir, "uploads", dom)
-            os.makedirs(dom_path, exist_ok=True)
-            os.makedirs(up_path, exist_ok=True)
-
-            t0 = time.time()
-            text, p_count, w_count, c_count, files = DocumentReader.extract_text_from_directory(dom_path)
-            
-            # Fallback text if directory empty
-            if not text.strip():
-                fallback_file = os.path.join(self.data_dir, f"{ast_id}.txt")
-                if os.path.exists(fallback_file):
-                    with open(fallback_file, "r", encoding="utf-8") as f:
-                        text = f.read()
-                    w_count = len(text.split())
-                    c_count = len(text)
-                    p_count = max(1, (w_count + 349) // 350)
-                    files = [f"{ast_id}.txt"]
-                else:
-                    text = f"Default Knowledge Base for {cfg['name']}."
-                    w_count = len(text.split())
-                    c_count = len(text)
-                    p_count = 1
-                    files = ["default.txt"]
-
-            engine = RAGEngine(
-                doc_text=text,
-                persona=cfg["persona"],
-                max_words=cfg["max_words"],
-                overlap=cfg["overlap"],
-                top_k=cfg["top_k"]
-            )
-            build_ms = round((time.time() - t0) * 1000, 2)
-
-            info = AssistantInfo(
+        # Helper to create initial metadata
+        def make_default_info(ast_id, name, icon, persona, desc, max_w, ov, top_k, default_file, default_text, samples):
+            w_count = len(default_text.split())
+            p_count = max(1, (w_count + 349) // 350)
+            return AssistantInfo(
                 id=ast_id,
-                name=cfg["name"],
-                icon=cfg["icon"],
-                persona=cfg["persona"],
-                description=cfg["desc"],
-                max_words=cfg["max_words"],
-                overlap=cfg["overlap"],
-                top_k=cfg["top_k"],
-                total_docs=len(files),
-                total_chunks=len(engine.chunks),
-                active_source="default_directory",
-                filename=", ".join(files) if files else "knowledge_base",
+                name=name,
+                icon=icon,
+                persona=persona,
+                description=desc,
+                max_words=max_w,
+                overlap=ov,
+                top_k=top_k,
+                total_docs=1,
+                total_chunks=0,  # set after engine init
+                active_source="default",
+                filename=default_file,
                 num_pages=p_count,
                 num_words=w_count,
-                num_chars=c_count,
-                vocab_size=getattr(engine, "vocab_size", 0),
-                matrix_shape=f"({len(engine.chunks)}, {getattr(engine, 'vocab_size', 0)})",
-                first_chunk_preview=engine.chunks[0] if engine.chunks else "",
-                index_status="✅ Successfully Indexed",
-                retrieval_ready=True,
                 is_custom=False,
-                documents=files,
-                build_time_ms=build_ms,
-                sample_queries=cfg["samples"]
+                sample_queries=samples
             )
 
-            self.assistants[ast_id] = {
-                "info": info,
-                "engine": engine,
-                "domain_folder": dom,
-                "default_files": files,
-                "default_text": text
-            }
+        # 1. Interview Coach
+        interview_text = self._load_data("interview_prep.txt")
+        interview_engine = RAGEngine(
+            doc_text=interview_text,
+            persona="a professional interview coach helping the candidate rehearse technical and behavioral questions based on their candidate profile",
+            max_words=80,
+            overlap=15,
+            top_k=2
+        )
+        info1 = make_default_info(
+            "interview_coach", "Interview Preparation Coach", "UserCheck",
+            "Professional Interview Coach",
+            "Rehearses project experience, React Native, Power BI, SQL, and ML/RAG engineering questions.",
+            80, 15, 2, "interview_prep.txt", interview_text,
+            [
+                "Tell me about a project where you worked with real-time data.",
+                "Tell me about a project involving payments.",
+                "What is your weakest area?"
+            ]
+        )
+        info1.total_chunks = len(interview_engine.chunks)
+        self.assistants["interview_coach"] = {
+            "info": info1,
+            "engine": interview_engine,
+            "default_text": interview_text,
+            "default_filename": "interview_prep.txt"
+        }
 
-            print("=" * 80, flush=True)
-            print(f"[STARTUP KNOWLEDGE BASE INDEXING: '{cfg['name']}']", flush=True)
-            print(f"- Indexed Documents ({len(files)} items): {files}", flush=True)
-            print(f"- Total Pages Read: {p_count} | Words: {w_count} | Chunks: {len(engine.chunks)}", flush=True)
-            print(f"- Build Time: {build_ms} ms | Status: Knowledge Base Ready", flush=True)
-            print("=" * 80, flush=True)
+        # 2. Campus FAQ
+        campus_text = self._load_data("campus_faq.txt")
+        campus_engine = RAGEngine(
+            doc_text=campus_text,
+            persona="a friendly campus helpdesk assistant providing accurate information regarding library, hostel, fees, and exams",
+            max_words=90,
+            overlap=20,
+            top_k=3
+        )
+        info2 = make_default_info(
+            "campus_faq", "Campus FAQ Helpdesk", "GraduationCap",
+            "Friendly Student Helpdesk",
+            "Instant student assistance for library borrowing limits, hostel curfew hours, fee penalties, and exam attendance.",
+            90, 20, 3, "campus_faq.txt", campus_text,
+            [
+                "How many books can I borrow?",
+                "Can I enter the hostel at 10 PM Saturday?",
+                "Will I get into trouble for late entry?"
+            ]
+        )
+        info2.total_chunks = len(campus_engine.chunks)
+        self.assistants["campus_faq"] = {
+            "info": info2,
+            "engine": campus_engine,
+            "default_text": campus_text,
+            "default_filename": "campus_faq.txt"
+        }
+
+        # 3. Study Buddy
+        study_text = self._load_data("study_buddy.txt")
+        study_engine = RAGEngine(
+            doc_text=study_text,
+            persona="a patient teacher helping students master operating systems CPU scheduling algorithms with simple explanations",
+            max_words=50,
+            overlap=12,
+            top_k=3
+        )
+        info3 = make_default_info(
+            "study_buddy", "Exam Study Buddy", "BookOpen",
+            "Patient OS Teacher",
+            "Tuned fine-grained RAG (50 words/chunk) explaining FCFS, SJF, Round Robin, and Convoy Effect.",
+            50, 12, 3, "study_buddy.txt", study_text,
+            [
+                "Which scheduling algorithm causes the convoy effect and why?",
+                "Why does Round Robin add overhead?",
+                "Compare FCFS and SJF scheduling."
+            ]
+        )
+        info3.total_chunks = len(study_engine.chunks)
+        self.assistants["study_buddy"] = {
+            "info": info3,
+            "engine": study_engine,
+            "default_text": study_text,
+            "default_filename": "study_buddy.txt"
+        }
+
+        # 4. Ecommerce Support
+        ecom_text = self._load_data("ecommerce.txt")
+        ecom_engine = RAGEngine(
+            doc_text=ecom_text,
+            persona="a polite customer support agent for the Voyager Pro 30L Commuter Backpack store",
+            max_words=80,
+            overlap=15,
+            top_k=2
+        )
+        info4 = make_default_info(
+            "ecommerce_support", "Ecommerce Customer Support", "ShoppingBag",
+            "Customer Support Agent",
+            "Product specification helper for laptop sizing, color options, 15-day return policy, and warranty.",
+            80, 15, 2, "ecommerce.txt", ecom_text,
+            [
+                "Does it fit a 15-inch laptop?",
+                "Available colours?",
+                "Refund after 20 days?"
+            ]
+        )
+        info4.total_chunks = len(ecom_engine.chunks)
+        self.assistants["ecommerce_support"] = {
+            "info": info4,
+            "engine": ecom_engine,
+            "default_text": ecom_text,
+            "default_filename": "ecommerce.txt"
+        }
+
+        # 5. Code Documentation Assistant
+        code_text = self._load_data("code_docs.txt")
+        code_engine = RAGEngine(
+            doc_text=code_text,
+            persona="a technical documentation expert explaining the RAGEngine Python API reference",
+            max_words=80,
+            overlap=20,
+            top_k=3
+        )
+        info5 = make_default_info(
+            "code_docs", "Code & API Documentation", "Code",
+            "Technical Documentation Expert",
+            "Grounded documentation assistant for RAGEngine methods: chunk_text(), retrieve(), and ask().",
+            80, 20, 3, "code_docs.txt", code_text,
+            [
+                "What does overlap do?",
+                "What happens if ask() finds no information?",
+                "How does retrieve() compute similarity?"
+            ]
+        )
+        info5.total_chunks = len(code_engine.chunks)
+        self.assistants["code_docs"] = {
+            "info": info5,
+            "engine": code_engine,
+            "default_text": code_text,
+            "default_filename": "code_docs.txt"
+        }
 
     def get_assistant(self, assistant_id: str) -> Optional[Dict[str, Any]]:
         return self.assistants.get(assistant_id)
@@ -203,100 +200,62 @@ class AssistantRegistry:
         assistant_id: str,
         new_text: str,
         filename: str,
-        mode: str = "add",
         num_pages: int = 1,
         num_words: int = 0,
         num_chars: int = 0
     ) -> Dict[str, Any]:
         """
-        Dynamically updates an assistant's active knowledge base with custom uploaded document.
-        Supports mode="replace" (clear previous uploads) vs mode="add" (merge with knowledge base).
+        Dynamically updates an assistant's active knowledge base with custom uploaded text.
         """
         ast = self.assistants.get(assistant_id)
         if not ast:
             raise ValueError(f"Assistant '{assistant_id}' not found.")
 
-        t0 = time.time()
         engine: RAGEngine = ast["engine"]
-        dom = ast["domain_folder"]
-        up_dir = os.path.join(self.data_dir, "uploads", dom)
-        dom_dir = os.path.join(self.data_dir, dom)
+        stats = engine.reindex_with_text(new_text)
 
-        os.makedirs(up_dir, exist_ok=True)
-        new_filepath = os.path.join(up_dir, filename)
-        with open(new_filepath, "w", encoding="utf-8") as f:
-            f.write(new_text)
-
-        if mode == "replace":
-            # Clear previous upload files except current
-            for f in os.listdir(up_dir):
-                if f != filename:
-                    try:
-                        os.remove(os.path.join(up_dir, f))
-                    except Exception:
-                        pass
-            # Index only newly uploaded document
-            combined_text = f"--- DOCUMENT: {filename} ---\n{new_text}"
-            file_list = [filename]
-            p_count = max(1, num_pages)
-            w_count = num_words if num_words > 0 else len(new_text.split())
-            c_count = num_chars if num_chars > 0 else len(new_text)
-        else:
-            # Mode "add": Merge default domain documents with uploaded documents
-            def_text, def_p, def_w, def_c, def_files = DocumentReader.extract_text_from_directory(dom_dir)
-            up_text, up_p, up_w, up_c, up_files = DocumentReader.extract_text_from_directory(up_dir)
-
-            combined_text = f"{def_text}\n\n{up_text}".strip()
-            p_count = def_p + up_p
-            w_count = def_w + up_w
-            c_count = def_c + up_c
-            file_list = sorted(list(set(def_files + up_files)))
-
-        stats = engine.reindex_with_text(combined_text, filename=filename)
-        build_ms = round((time.time() - t0) * 1000, 2)
+        if num_words == 0:
+            num_words = stats.get("word_count", len(new_text.split()))
+        if num_chars == 0:
+            num_chars = stats.get("char_count", len(new_text))
 
         info: AssistantInfo = ast["info"]
-        info.active_source = "uploaded" if mode == "replace" else "hybrid_knowledge_base"
+        info.active_source = "uploaded"
         info.filename = filename
-        info.num_pages = p_count
-        info.num_words = w_count
-        info.num_chars = c_count
-        info.vocab_size = stats.get("vocab_size", getattr(engine, "vocab_size", 0))
-        info.matrix_shape = stats.get("matrix_shape", f"({len(engine.chunks)}, {info.vocab_size})")
-        info.first_chunk_preview = stats.get("first_chunk_preview", engine.chunks[0] if engine.chunks else "")
+        info.num_pages = max(1, num_pages)
+        info.num_words = num_words
+        info.num_chars = num_chars
+        info.vocab_size = stats.get("vocab_size", 0)
+        info.matrix_shape = stats.get("matrix_shape", "(0, 0)")
+        info.first_chunk_preview = stats.get("first_chunk_preview", "")
         info.index_status = "✅ Successfully Indexed"
         info.retrieval_ready = True
         info.is_custom = True
         info.total_chunks = len(engine.chunks)
-        info.total_docs = len(file_list)
-        info.documents = file_list
-        info.build_time_ms = build_ms
+        info.total_docs += 1
 
-        safe_print("=" * 80, flush=True)
-        safe_print(f"[RAG KNOWLEDGE BASE INDEXING TELEMETRY]", flush=True)
-        safe_print(f"- Assistant ID: '{assistant_id}' | Mode: '{mode.upper()}'", flush=True)
-        safe_print(f"- Active Documents ({len(file_list)} items): {file_list}", flush=True)
-        safe_print(f"- Total Pages Read: {info.num_pages}", flush=True)
-        safe_print(f"- Total Words: {info.num_words}", flush=True)
-        safe_print(f"- Total Chunks Created: {info.total_chunks}", flush=True)
-        safe_print(f"- Vocabulary Size: {info.vocab_size}", flush=True)
-        safe_print(f"- TF-IDF Matrix Shape: {info.matrix_shape}", flush=True)
-        safe_print(f"- Build Time: {build_ms} ms | Status: Successfully Indexed", flush=True)
-        safe_print("=" * 80, flush=True)
+        print("=" * 80, flush=True)
+        print(f"[RAG ENGINE INDEXING TELEMETRY LOG]", flush=True)
+        print(f"- Assistant ID: '{assistant_id}'", flush=True)
+        print(f"- Document Name: '{filename}'", flush=True)
+        print(f"- Pages Read: {info.num_pages}", flush=True)
+        print(f"- Total Words: {info.num_words}", flush=True)
+        print(f"- Total Characters: {info.num_chars}", flush=True)
+        print(f"- Total Chunks Created: {info.total_chunks}", flush=True)
+        print(f"- Vocabulary Size: {info.vocab_size}", flush=True)
+        print(f"- TF-IDF Matrix Shape: {info.matrix_shape}", flush=True)
+        print(f"- First Chunk Preview: \"{info.first_chunk_preview[:120]}...\"", flush=True)
+        print("=" * 80, flush=True)
 
         return {
             "assistant_id": assistant_id,
             "filename": filename,
-            "mode": mode,
-            "documents": file_list,
-            "total_docs": len(file_list),
             "num_pages": info.num_pages,
             "num_words": info.num_words,
             "num_chars": info.num_chars,
             "num_chunks": info.total_chunks,
             "vocab_size": info.vocab_size,
             "matrix_shape": info.matrix_shape,
-            "build_time_ms": build_ms,
             "first_chunk_preview": info.first_chunk_preview,
             "active_source": info.active_source,
             "index_status": info.index_status,
@@ -305,66 +264,41 @@ class AssistantRegistry:
 
     def reset_assistant_dataset(self, assistant_id: str) -> Dict[str, Any]:
         """
-        Resets an assistant's knowledge base back to its original default domain directory dataset.
+        Resets an assistant's knowledge base back to its original default dataset.
         """
         ast = self.assistants.get(assistant_id)
         if not ast:
             raise ValueError(f"Assistant '{assistant_id}' not found.")
 
-        t0 = time.time()
-        dom = ast["domain_folder"]
-        dom_dir = os.path.join(self.data_dir, dom)
-        up_dir = os.path.join(self.data_dir, "uploads", dom)
-
-        # Clear uploaded files
-        if os.path.exists(up_dir):
-            for f in os.listdir(up_dir):
-                try:
-                    os.remove(os.path.join(up_dir, f))
-                except Exception:
-                    pass
-
-        text, p_count, w_count, c_count, files = DocumentReader.extract_text_from_directory(dom_dir)
-        if not text.strip():
-            text = ast["default_text"]
-            files = ast["default_files"]
-            w_count = len(text.split())
-            c_count = len(text)
-            p_count = max(1, (w_count + 349) // 350)
-
+        default_text = ast["default_text"]
+        default_filename = ast["default_filename"]
         engine: RAGEngine = ast["engine"]
-        stats = engine.reindex_with_text(text)
-        build_ms = round((time.time() - t0) * 1000, 2)
+        stats = engine.reindex_with_text(default_text)
+
+        w_count = stats.get("word_count", len(default_text.split()))
+        c_count = stats.get("char_count", len(default_text))
+        p_count = max(1, (w_count + 349) // 350)
 
         info: AssistantInfo = ast["info"]
-        info.active_source = "default_directory"
-        info.filename = ", ".join(files) if files else "default_dataset"
+        info.active_source = "default"
+        info.filename = default_filename
         info.num_pages = p_count
         info.num_words = w_count
         info.num_chars = c_count
-        info.vocab_size = stats.get("vocab_size", getattr(engine, "vocab_size", 0))
-        info.matrix_shape = stats.get("matrix_shape", f"({len(engine.chunks)}, {info.vocab_size})")
-        info.first_chunk_preview = stats.get("first_chunk_preview", engine.chunks[0] if engine.chunks else "")
         info.index_status = "✅ Successfully Indexed"
         info.retrieval_ready = True
         info.is_custom = False
         info.total_chunks = len(engine.chunks)
-        info.total_docs = len(files)
-        info.documents = files
-        info.build_time_ms = build_ms
 
         return {
             "assistant_id": assistant_id,
-            "filename": info.filename,
-            "documents": files,
-            "total_docs": len(files),
+            "filename": default_filename,
             "num_pages": info.num_pages,
             "num_words": info.num_words,
             "num_chars": info.num_chars,
             "num_chunks": info.total_chunks,
             "active_source": info.active_source,
             "index_status": info.index_status,
-            "build_time_ms": build_ms,
             "retrieval_ready": info.retrieval_ready
         }
 
@@ -400,8 +334,6 @@ class AssistantRegistry:
             breakdown.append({
                 "id": key,
                 "name": item["info"].name,
-                "documents": item["info"].documents,
-                "doc_count": item["info"].total_docs,
                 "chunk_count": len(item["engine"].chunks),
                 "queries_count": len(ast_queries),
                 "avg_score": round(sum(q["similarity_score"] for q in ast_queries) / len(ast_queries), 4) if ast_queries else 0.9120
@@ -411,7 +343,7 @@ class AssistantRegistry:
             "total_documents": total_docs,
             "total_chunks": total_chunks,
             "avg_retrieval_score": avg_score,
-            "current_model": "llama-3.3-70b-versatile (Groq Cloud)",
+            "current_model": "claude-3-7-sonnet-20250219",
             "avg_response_time_ms": avg_latency,
             "total_queries": len(self.query_history),
             "assistant_breakdown": breakdown
@@ -426,4 +358,3 @@ def get_registry() -> AssistantRegistry:
     if _global_registry is None:
         _global_registry = AssistantRegistry()
     return _global_registry
-

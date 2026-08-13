@@ -4,14 +4,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-backend_dir = os.path.dirname(os.path.abspath(__file__))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+# Ensure backend directory is in python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from api.routes import router as api_router
 
 app = FastAPI(
-    title="RAG AI Assistant Suite API",
+    title="🧠 RAG AI Assistant Suite API",
     description="Enterprise-Grade Multi-Use Case Retrieval-Augmented Generation Platform API",
     version="1.0.0",
     docs_url="/docs",
@@ -34,7 +33,7 @@ app.include_router(api_router, prefix="/api/v1")
 @app.get("/")
 def root():
     return {
-        "title": "RAG AI Assistant Suite API",
+        "title": "🧠 RAG AI Assistant Suite API",
         "status": "online",
         "docs": "/docs",
         "health": "/api/v1/health",

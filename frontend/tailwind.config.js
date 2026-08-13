@@ -8,56 +8,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        obsidian: {
-          950: '#110F17',
-          900: '#181423',
-          800: '#231D31',
-          700: '#352D48',
-        },
         navy: {
-          950: '#110F17',
-          900: '#181423',
-          800: '#231D31',
-          700: '#352D48',
+          950: '#0B1120',
+          900: '#0F172A',
+          800: '#1E293B',
+          700: '#334155',
         },
         charcoal: {
-          950: '#121216',
-          900: '#1A1A22',
-          800: '#252530',
-        },
-        roseGold: {
-          300: '#FDA4AF',
-          400: '#FB7185',
-          500: '#F43F5E',
-          600: '#E11D48',
-          700: '#BE123C',
+          950: '#090D16',
+          900: '#111827',
+          800: '#1F2937',
         },
         electric: {
-          400: '#FB7185',
-          500: '#F43F5E',
-          600: '#E11D48',
-          700: '#BE123C',
-        },
-        amethyst: {
-          300: '#D8B4FE',
-          400: '#C084FC',
-          500: '#A855F7',
-          600: '#9333EA',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
         },
         purpleAccent: {
-          400: '#C084FC',
-          500: '#A855F7',
-          600: '#9333EA',
-        },
-        champagne: {
-          300: '#FDE68A',
-          400: '#FBBF24',
-          500: '#F59E0B',
-          600: '#D97706',
+          400: '#A78BFA',
+          500: '#8B5CF6',
+          600: '#7C3AED',
         },
         cyanAccent: {
-          400: '#FBBF24',
-          500: '#F59E0B',
+          400: '#22D3EE',
+          500: '#06B6D4',
         },
         emeraldAccent: {
           400: '#34D399',
@@ -68,19 +43,18 @@ module.exports = {
           500: '#F59E0B',
         },
         roseAccent: {
-          400: '#FB7185',
-          500: '#F43F5E',
+          400: '#F87171',
+          500: '#EF4444',
         }
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'JetBrains Mono', 'monospace'],
       },
       boxShadow: {
-        'glow-rose': '0 0 25px -5px rgba(244, 63, 94, 0.4)',
-        'glow-blue': '0 0 25px -5px rgba(244, 63, 94, 0.4)',
-        'glow-purple': '0 0 25px -5px rgba(168, 85, 247, 0.4)',
-        'glow-amber': '0 0 25px -5px rgba(245, 158, 11, 0.4)',
+        'glow-blue': '0 0 25px -5px rgba(59, 130, 246, 0.4)',
+        'glow-purple': '0 0 25px -5px rgba(139, 92, 246, 0.4)',
+        'glow-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.4)',
         'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
       },
       animation: {
@@ -96,8 +70,8 @@ module.exports = {
           '50%': { transform: 'translateY(-10px)' },
         },
         pulseGlow: {
-          '0%, 100%': { opacity: '0.6', filter: 'drop-shadow(0 0 12px rgba(244, 63, 94, 0.4))' },
-          '50%': { opacity: '1', filter: 'drop-shadow(0 0 24px rgba(168, 85, 247, 0.8))' },
+          '0%, 100%': { opacity: '0.6', filter: 'drop-shadow(0 0 12px rgba(59, 130, 246, 0.4))' },
+          '50%': { opacity: '1', filter: 'drop-shadow(0 0 24px rgba(139, 92, 246, 0.8))' },
         },
         fadeIn: {
           '0%': { opacity: '0', transform: 'scale(0.98)' },

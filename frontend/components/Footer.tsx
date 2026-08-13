@@ -6,13 +6,13 @@ import { Brain, Github, Terminal, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-obsidian-950/80 py-12 transition-colors duration-200">
+    <footer className="border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/80 py-12 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-roseGold-600 flex items-center justify-center text-white font-bold shadow-glow-rose">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold">
                 <Brain className="w-5 h-5" />
               </div>
               <span className="font-bold text-lg">RAG AI Assistant Suite</span>
@@ -21,9 +21,9 @@ export default function Footer() {
               Enterprise-grade multi-use case platform showcasing TF-IDF Cosine Similarity vector search, sliding-window word chunking, and Anthropic Claude Sonnet grounded completion across 5 specialized AI Assistants.
             </p>
             <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
-              <span className="flex items-center gap-1"><Cpu className="w-3.5 h-3.5 text-roseGold-400" /> Next.js 15</span>
+              <span className="flex items-center gap-1"><Cpu className="w-3.5 h-3.5 text-indigo-400" /> Next.js 15</span>
               <span>•</span>
-              <span className="flex items-center gap-1"><Terminal className="w-3.5 h-3.5 text-amethyst-400" /> FastAPI</span>
+              <span className="flex items-center gap-1"><Terminal className="w-3.5 h-3.5 text-purple-400" /> FastAPI</span>
               <span>•</span>
               <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Claude Sonnet</span>
             </div>
@@ -32,22 +32,22 @@ export default function Footer() {
           <div>
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-4">Assistants</h4>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">Interview Coach</Link></li>
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">Campus FAQ</Link></li>
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">Exam Study Buddy</Link></li>
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">Ecommerce Support</Link></li>
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">Code Documentation</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">Interview Coach</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">Campus FAQ</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">Exam Study Buddy</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">Ecommerce Support</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">Code Documentation</Link></li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 uppercase tracking-wider mb-4">Navigation</h4>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li><Link href="/" className="hover:text-roseGold-500 transition">Landing Page</Link></li>
-              <li><Link href="/chat" className="hover:text-roseGold-500 transition">AI Studio Workspace</Link></li>
-              <li><Link href="/dashboard" className="hover:text-roseGold-500 transition">Platform Analytics</Link></li>
-              <li><Link href="/settings" className="hover:text-roseGold-500 transition">Settings & API Key</Link></li>
-              <li><Link href="/about" className="hover:text-roseGold-500 transition">Architecture Docs</Link></li>
+              <li><Link href="/" className="hover:text-indigo-500 transition">Landing Page</Link></li>
+              <li><Link href="/chat" className="hover:text-indigo-500 transition">AI Studio Workspace</Link></li>
+              <li><Link href="/dashboard" className="hover:text-indigo-500 transition">Platform Analytics</Link></li>
+              <li><Link href="/settings" className="hover:text-indigo-500 transition">Settings & API Key</Link></li>
+              <li><Link href="/about" className="hover:text-indigo-500 transition">Architecture Docs</Link></li>
             </ul>
           </div>
 

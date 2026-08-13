@@ -16,7 +16,6 @@ from models.schemas import (
     HealthResponse
 )
 from use_cases.registry import get_registry
-from utils.document_reader import DocumentReader
 from engine.document_loaders import extract_text
 
 router = APIRouter()
@@ -54,7 +53,7 @@ def get_assistant_detail(assistant_id: str):
     return data["info"]
 
 
-async def _process_upload(assistant_id: str, file: UploadFile, mode: str = "add"):
+async def _process_upload(assistant_id: str, file: UploadFile):
     registry = get_registry()
     ast = registry.get_assistant(assistant_id)
     if not ast:
@@ -89,25 +88,20 @@ async def _process_upload(assistant_id: str, file: UploadFile, mode: str = "add"
         assistant_id=assistant_id,
         new_text=doc_text,
         filename=filename,
-        mode=mode,
         num_pages=num_pages,
         num_words=num_words,
         num_chars=num_chars
     )
 
     return {
-        "message": f"Successfully parsed and indexed '{filename}' ({mode.upper()} Mode)!",
+        "message": f"Successfully parsed and indexed '{filename}'!",
         "filename": filename,
-        "mode": mode,
-        "documents": result["documents"],
-        "total_docs": result["total_docs"],
         "num_pages": result["num_pages"],
         "num_words": result["num_words"],
         "num_chars": result["num_chars"],
         "num_chunks": result["num_chunks"],
         "vocab_size": result.get("vocab_size", 0),
         "matrix_shape": result.get("matrix_shape", "(0, 0)"),
-        "build_time_ms": result.get("build_time_ms", 0.0),
         "first_chunk_preview": result.get("first_chunk_preview", ""),
         "active_source": result["active_source"],
         "index_status": result["index_status"],
@@ -117,23 +111,15 @@ async def _process_upload(assistant_id: str, file: UploadFile, mode: str = "add"
 
 
 @router.post("/assistants/{assistant_id}/upload", tags=["Assistants"])
-async def upload_document_for_assistant(
-    assistant_id: str,
-    file: UploadFile = File(...),
-    mode: str = Form("add")
-):
-    """Upload a document for a specific assistant with mode='add' or mode='replace'."""
-    return await _process_upload(assistant_id, file, mode=mode)
+async def upload_document_for_assistant(assistant_id: str, file: UploadFile = File(...)):
+    """Upload a document for a specific assistant by ID in path."""
+    return await _process_upload(assistant_id, file)
 
 
 @router.post("/upload", tags=["Document Upload"])
-async def upload_document(
-    assistant_id: str = Form(...),
-    file: UploadFile = File(...),
-    mode: str = Form("add")
-):
-    """Upload a document for an assistant specified in form data with mode='add' or mode='replace'."""
-    return await _process_upload(assistant_id, file, mode=mode)
+async def upload_document(assistant_id: str = Form(...), file: UploadFile = File(...)):
+    """Upload a document for an assistant specified in form data."""
+    return await _process_upload(assistant_id, file)
 
 
 @router.post("/assistants/{assistant_id}/reset", tags=["Assistants"])
@@ -192,8 +178,7 @@ def chat_with_assistant(req: ChatRequest):
     )
 
     try:
-        g_mode = req.grounded_mode if req.grounded_mode is not None else True
-        detailed = engine.ask_detailed(req.query.strip(), grounded_mode=g_mode)
+        detailed = engine.ask_detailed(req.query.strip())
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
