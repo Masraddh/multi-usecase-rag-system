@@ -38,6 +38,7 @@ class RetrievedChunk(BaseModel):
 class ChatRequest(BaseModel):
     assistant_id: str = Field(..., description="Target AI assistant ID")
     query: str = Field(..., description="User prompt query")
+    mode: Optional[str] = Field("rag", description="Execution mode: 'rag' or 'ai'")
     max_words: Optional[int] = Field(None, description="Optional override chunk size")
     overlap: Optional[int] = Field(None, description="Optional override chunk overlap")
     top_k: Optional[int] = Field(None, description="Optional override top_k parameter")
@@ -47,11 +48,23 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     assistant_id: str
     query: str
+    mode: str = Field("rag", description="Execution mode used ('rag' or 'ai')")
     answer: str
     citations: List[str]
     retrieved_chunks: List[RetrievedChunk]
     max_similarity_score: float
     latency_ms: float
+
+
+class DocumentContentResponse(BaseModel):
+    assistant_id: str
+    filename: str
+    text: str
+    num_pages: int
+    num_words: int
+    num_chars: int
+    num_chunks: int
+    active_source: str
 
 
 class RetrieveRequest(BaseModel):

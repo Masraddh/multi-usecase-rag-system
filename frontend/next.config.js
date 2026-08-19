@@ -7,6 +7,14 @@ const nextConfig = {
         source: '/api/v1/:path*',
         destination: process.env.BACKEND_URL || 'http://localhost:8000/api/v1/:path*',
       },
+      {
+        source: '/docs',
+        destination: 'http://localhost:8000/docs',
+      },
+      {
+        source: '/redoc',
+        destination: 'http://localhost:8000/redoc',
+      },
     ];
   },
 };

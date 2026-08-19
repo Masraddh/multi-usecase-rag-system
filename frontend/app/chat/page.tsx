@@ -5,13 +5,16 @@ import Sidebar from '../../components/Sidebar';
 import MessageItem, { Message } from '../../components/MessageItem';
 import RetrievalPanel from '../../components/RetrievalPanel';
 import FileUploadCard from '../../components/FileUploadCard';
-import { fetchAssistants, sendQuery, AssistantInfo, ChatResponse, RetrievedChunk } from '../../services/api';
-import { Send, Sparkles, Download, Layers, AlertCircle, RefreshCw, FileText, CheckCircle2 } from 'lucide-react';
+import { fetchAssistants, sendQuery, fetchAssistantDocument, AssistantInfo, ChatResponse, RetrievedChunk } from '../../services/api';
+import { Send, Sparkles, Download, Layers, AlertCircle, RefreshCw, FileText, CheckCircle2, Eye, X, Cpu } from 'lucide-react';
 
 export default function ChatPage() {
   const [assistants, setAssistants] = useState<AssistantInfo[]>([]);
   const [selectedAssistant, setSelectedAssistant] = useState<AssistantInfo | null>(null);
   
+  // Execution Mode: 'rag' or 'ai'
+  const [mode, setMode] = useState<'rag' | 'ai'>('rag');
+
   // Custom RAG Parameters
   const [maxWords, setMaxWords] = useState<number>(80);
   const [overlap, setOverlap] = useState<number>(15);
@@ -27,6 +30,26 @@ export default function ChatPage() {
   const [activeRetrievalChunks, setActiveRetrievalChunks] = useState<RetrievedChunk[]>([]);
   const [activeMaxScore, setActiveMaxScore] = useState<number>(0);
   const [showRetrievalPanel, setShowRetrievalPanel] = useState<boolean>(false);
+
+  // Document Fetching Modal State
+  const [docModalOpen, setDocModalOpen] = useState<boolean>(false);
+  const [docContent, setDocContent] = useState<string>('');
+  const [fetchingDoc, setFetchingDoc] = useState<boolean>(false);
+
+  const handleFetchDocument = async () => {
+    if (!selectedAssistant) return;
+    setFetchingDoc(true);
+    setErrorMsg(null);
+    try {
+      const res = await fetchAssistantDocument(selectedAssistant.id);
+      setDocContent(res.text || 'No content found in this document file.');
+      setDocModalOpen(true);
+    } catch (err: any) {
+      setErrorMsg(`Unable to fetch document payload: ${err.message}`);
+    } finally {
+      setFetchingDoc(false);
+    }
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -126,6 +149,7 @@ export default function ChatPage() {
       const response: ChatResponse = await sendQuery({
         assistant_id: selectedAssistant.id,
         query: q.trim(),
+        mode: mode,
         max_words: maxWords,
         overlap: overlap,
         top_k: topK
@@ -190,6 +214,8 @@ export default function ChatPage() {
         assistants={assistants}
         selectedAssistant={selectedAssistant}
         onSelectAssistant={handleSelectAssistant}
+        mode={mode}
+        setMode={setMode}
         maxWords={maxWords}
         setMaxWords={setMaxWords}
         overlap={overlap}
@@ -223,8 +249,32 @@ export default function ChatPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {activeRetrievalChunks.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Mode Selection Button Group */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800">
+              <button
+                onClick={() => setMode('rag')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 ${
+                  mode === 'rag'
+                    ? 'bg-electric-500 text-white shadow-glow-blue'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🧠</span> RAG Mode
+              </button>
+              <button
+                onClick={() => setMode('ai')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 ${
+                  mode === 'ai'
+                    ? 'bg-purpleAccent-500 text-white shadow-glow-purple'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>🤖</span> Pure AI Mode
+              </button>
+            </div>
+
+            {activeRetrievalChunks.length > 0 && mode === 'rag' && (
               <button
                 onClick={() => setShowRetrievalPanel(!showRetrievalPanel)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
@@ -266,9 +316,19 @@ export default function ChatPage() {
               {selectedAssistant?.filename || 'default_dataset.txt'}
               <CheckCircle2 className="w-3 h-3 text-emerald-400" />
             </span>
+
+            <button
+              onClick={handleFetchDocument}
+              disabled={fetchingDoc}
+              className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-1.5 transition disabled:opacity-50"
+              title="Fetch raw document content from backend"
+            >
+              {fetchingDoc ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+              Fetch & View Document
+            </button>
           </div>
           <div className="text-slate-400 font-mono text-[11px]">
-            {selectedAssistant?.total_chunks || 0} Chunks Indexing Active • Grounded RAG Ready
+            {selectedAssistant?.total_chunks || 0} Chunks Indexing Active • {mode === 'rag' ? 'Grounded RAG Mode' : 'Pure AI Mode'}
           </div>
         </div>
 
@@ -357,6 +417,52 @@ export default function ChatPage() {
         </div>
 
       </div>
+
+      {/* Document Content View Modal */}
+      {docModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-3xl w-full space-y-4 shadow-2xl relative max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-electric-400" />
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  Active Document Payload: <span className="font-mono text-electric-300 bg-electric-500/10 px-2 py-0.5 rounded border border-electric-500/20">{selectedAssistant?.filename}</span>
+                </h3>
+              </div>
+              <button
+                onClick={() => setDocModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 rounded-xl bg-slate-950/90 border border-slate-800 text-xs font-mono text-slate-300 leading-relaxed whitespace-pre-wrap shadow-inner">
+              {docContent}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs">
+              <span className="text-slate-400 font-mono">
+                Total Characters: <strong className="text-slate-200 font-bold">{docContent.length.toLocaleString()}</strong> | Words: <strong className="text-purple-400 font-bold">{docContent.split(/\s+/).filter(Boolean).length.toLocaleString()}</strong>
+              </span>
+              <button
+                onClick={() => {
+                  const blob = new Blob([docContent], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = selectedAssistant?.filename || 'document.txt';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-4 py-2 rounded-xl bg-electric-500 hover:bg-electric-600 text-white font-bold text-xs shadow-glow-blue flex items-center gap-1.5 transition"
+              >
+                <Download className="w-4 h-4" /> Download Document File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

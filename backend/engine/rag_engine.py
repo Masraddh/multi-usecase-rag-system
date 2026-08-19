@@ -321,13 +321,95 @@ class RAGEngine:
 
         return query, False, None
 
-    def ask_detailed(self, query: str) -> Dict[str, Any]:
+    def ask_detailed(self, query: str, mode: str = "rag") -> Dict[str, Any]:
         """
-        Retrieves context chunks and invokes LLM (Anthropic Claude Sonnet or OpenAI fallback)
-        with strict grounding rules and comprehensive debug logging.
+        Retrieves context chunks and invokes LLM (Anthropic Claude Sonnet or OpenAI fallback).
+        Supports two execution modes:
+        - "rag": Strict document vector search grounding with citations and zero-hallucination guardrails.
+        - "ai": Direct LLM assistant completion using general AI knowledge with persona instructions.
         """
         start_time = time.time()
         query_clean = query.strip()
+        exec_mode = mode.lower() if mode else "rag"
+
+        if exec_mode == "ai":
+            # ==================================================================
+            # PURE AI ASSISTANT MODE (Direct LLM Completion)
+            # ==================================================================
+            system_prompt = (
+                f"You are {self.persona}.\n\n"
+                "Provide a helpful, intelligent, articulate, and professional answer to the user's question. "
+                "Maintain your assigned persona and voice."
+            )
+            user_content = f"User Query: {query_clean}\n\nAnswer:"
+            answer = ""
+
+            # 1. Call Anthropic API if client is present
+            if not self.anthropic_client and anthropic:
+                ak = self.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
+                if ak and ak.strip():
+                    try:
+                        self.anthropic_client = anthropic.Anthropic(api_key=ak.strip())
+                    except Exception as e:
+                        print(f"[AI MODE ANTHROPIC INIT ERROR]: {e}")
+
+            if self.anthropic_client:
+                try:
+                    response = self.anthropic_client.messages.create(
+                        model=self.model,
+                        max_tokens=1000,
+                        system=system_prompt,
+                        messages=[{"role": "user", "content": user_content}]
+                    )
+                    answer = response.content[0].text.strip()
+                except Exception as e:
+                    print(f"[AI MODE ANTHROPIC API ERROR]: {e}")
+
+            # 2. Call OpenAI API if Anthropic unavailable/failed
+            if not answer and not self.openai_client and openai:
+                ok = os.getenv("OPENAI_API_KEY") or self.anthropic_key or os.getenv("ANTHROPIC_API_KEY")
+                if ok and ok.strip():
+                    try:
+                        self.openai_client = openai.OpenAI(api_key=ok.strip())
+                    except Exception as e:
+                        print(f"[AI MODE OPENAI INIT ERROR]: {e}")
+
+            if not answer and self.openai_client:
+                try:
+                    response = self.openai_client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        max_tokens=1000,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_content}
+                        ]
+                    )
+                    answer = response.choices[0].message.content.strip()
+                except Exception as e:
+                    print(f"[AI MODE OPENAI API ERROR]: {e}")
+
+            # 3. Fallback if no LLM API key configured or API calls fail
+            if not answer:
+                answer = (
+                    f"🤖 **[Pure AI Assistant Mode Active]**\n\n"
+                    f"As {self.persona}, I am ready to answer your query: **\"{query_clean}\"**.\n\n"
+                    f"*(Note: In Pure AI Mode, document vector retrieval is bypassed. Configure your `ANTHROPIC_API_KEY` in Settings to activate live LLM natural language responses.)*"
+                )
+
+            latency_ms = round((time.time() - start_time) * 1000, 2)
+            return {
+                "query": query_clean,
+                "mode": "ai",
+                "answer": answer,
+                "citations": [],
+                "retrieved_chunks": [],
+                "max_similarity_score": 0.0,
+                "latency_ms": latency_ms
+            }
+
+        # ======================================================================
+        # RAG MODE (Vector Retrieval + Document Grounding)
+        # ======================================================================
 
         # 1. Semantic Intent Detection & Query Expansion
         search_query, is_intent, intent_cat = self._preprocess_and_expand_query(query_clean)
@@ -490,11 +572,8 @@ class RAGEngine:
         if not citations and answer != "I don't have that information." and relevant_chunks:
             citations = [f"[Source {relevant_chunks[0][0]}]"]
 
-        # ======================================================================
-        # DEBUG LOGGING (Checklist Items #4, #13)
-        # ======================================================================
         print("=" * 80, flush=True)
-        print(f"[RAG DEBUG LOG]", flush=True)
+        print(f"[RAG DEBUG LOG - MODE: {exec_mode.upper()}]", flush=True)
         print(f"1. Current User Question: '{query_clean}'", flush=True)
         print(f"2. Persona: '{self.persona}'", flush=True)
         print(f"3. Search Expansion Query: '{search_query}' (Intent: {intent_cat})", flush=True)
@@ -509,6 +588,7 @@ class RAGEngine:
 
         return {
             "query": query_clean,
+            "mode": "rag",
             "answer": answer,
             "citations": citations,
             "retrieved_chunks": retrieved_metadata,

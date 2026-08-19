@@ -9,6 +9,7 @@ try:
         AssistantInfo,
         ChatRequest,
         ChatResponse,
+        DocumentContentResponse,
         RetrieveRequest,
         RetrieveResponse,
         RetrievedChunk,
@@ -24,6 +25,7 @@ except ModuleNotFoundError:
         AssistantInfo,
         ChatRequest,
         ChatResponse,
+        DocumentContentResponse,
         RetrieveRequest,
         RetrieveResponse,
         RetrievedChunk,
@@ -165,11 +167,41 @@ def reset_document_for_assistant(assistant_id: str):
     }
 
 
+@router.get("/assistants/{assistant_id}/document", response_model=DocumentContentResponse, tags=["Assistants"])
+def get_assistant_document(assistant_id: str):
+    """
+    Fetch raw text content and metadata of active document file for specified assistant.
+    Solves file fetching issues by exposing direct document download payload.
+    """
+    registry = get_registry()
+    data = registry.get_assistant(assistant_id)
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Assistant '{assistant_id}' not found."
+        )
+
+    info = data["info"]
+    engine = data["engine"]
+    doc_text = getattr(engine, "doc_text", "")
+
+    return DocumentContentResponse(
+        assistant_id=assistant_id,
+        filename=info.filename,
+        text=doc_text,
+        num_pages=info.num_pages,
+        num_words=info.num_words,
+        num_chars=info.num_chars or len(doc_text),
+        num_chunks=info.total_chunks,
+        active_source=info.active_source
+    )
+
+
 @router.post("/chat", response_model=ChatResponse, tags=["RAG Execution"])
 def chat_with_assistant(req: ChatRequest):
     """
     Process user query through selected assistant RAG engine.
-    Executes TF-IDF vector retrieval and LLM completion with strict grounding.
+    Supports execution mode: 'rag' (grounded vector retrieval) or 'ai' (direct LLM completion).
     """
     if not req.query or not req.query.strip():
         raise HTTPException(
@@ -186,6 +218,7 @@ def chat_with_assistant(req: ChatRequest):
         )
 
     engine = data["engine"]
+    selected_mode = req.mode or "rag"
 
     # Update parameters if custom overrides provided in request
     engine.update_params(
@@ -196,7 +229,7 @@ def chat_with_assistant(req: ChatRequest):
     )
 
     try:
-        detailed = engine.ask_detailed(req.query.strip())
+        detailed = engine.ask_detailed(req.query.strip(), mode=selected_mode)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -210,15 +243,16 @@ def chat_with_assistant(req: ChatRequest):
         score=detailed["max_similarity_score"]
     )
 
-    retrieved_models = [RetrievedChunk(**chunk) for chunk in detailed["retrieved_chunks"]]
+    retrieved_models = [RetrievedChunk(**chunk) for chunk in detailed.get("retrieved_chunks", [])]
 
     return ChatResponse(
         assistant_id=req.assistant_id,
         query=req.query,
+        mode=detailed.get("mode", selected_mode),
         answer=detailed["answer"],
-        citations=detailed["citations"],
+        citations=detailed.get("citations", []),
         retrieved_chunks=retrieved_models,
-        max_similarity_score=detailed["max_similarity_score"],
+        max_similarity_score=detailed.get("max_similarity_score", 0.0),
         latency_ms=detailed["latency_ms"]
     )
 

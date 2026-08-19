@@ -74,9 +74,15 @@ export default function MessageItem({ message, onInspectRetrieval }: MessageItem
               {isUser ? 'You' : 'AI Assistant'}
             </span>
             {!isUser && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emeraldAccent-500/10 text-emeraldAccent-400 border border-emeraldAccent-500/20">
-                <ShieldCheck className="w-3 h-3" /> Grounded RAG
-              </span>
+              message.responseMeta?.mode === 'ai' ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <Sparkles className="w-3 h-3 text-purple-400" /> Pure AI Mode
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emeraldAccent-500/10 text-emeraldAccent-400 border border-emeraldAccent-500/20">
+                  <ShieldCheck className="w-3 h-3" /> Grounded RAG
+                </span>
+              )
             )}
             <span className={`text-[10px] font-mono ${isUser ? 'text-blue-100/80' : 'text-slate-400'}`}>
               {message.timestamp}
